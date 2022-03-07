@@ -38,8 +38,19 @@ We experiment on two datasets ([CSDS](https://github.com/xiaolinAndy/CSDS) and [
 #### Instruction for PGN interact
 
 1. Go to the *models/PGN_interact/* directory.
+
 2. Download the CSDS/MC dataset, and put the data under the folder *data/CSDS* or *data/MC*.
+
 3. If you want to extract the pretrained embeddings, download the [tencent embedding](https://ai.tencent.com/ailab/nlp/en/embedding.html) and put it under the *../pretrained/* folder, else you could use our provided extracted embeddings and pass this step.
+
+   For MC dataset, the extracted embeddings are a bit large and you could download it through:
+
+   - google drive: https://drive.google.com/file/d/1KsaY0ErkyJwJY1hndbX7XzJp5lrQkeYm/view?usp=sharing
+
+   - baidudisk：https://pan.baidu.com/s/1_LDNFvd5AGocalWkYcv57Q password: 5d1o
+
+   After downloading, please put it under the *models/PGN_interact/data_utils/embeddings* folder
+
 4. Run the bash file *run_CSDS.sh* or *run_MC.sh* to train and test.
 
 #### Instruction for BERTAbs interact
