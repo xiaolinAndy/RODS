@@ -93,8 +93,26 @@ We thanks for all these researchers who have made their codes publicly available
 
 ### 5. Citation
 
-We will updatae the citation format soon.
-
+If you want to cite our paper, please use this ACL proceeding bibtex version:
+```
+@inproceedings{lin-etal-2022-roles,
+    title = "Other Roles Matter! Enhancing Role-Oriented Dialogue Summarization via Role Interactions",
+    author = "Lin, Haitao  and
+      Zhu, Junnan  and
+      Xiang, Lu  and
+      Zhou, Yu  and
+      Zhang, Jiajun  and
+      Zong, Chengqing",
+    booktitle = "Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = may,
+    year = "2022",
+    address = "Dublin, Ireland",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.acl-long.182",
+    pages = "2545--2558",
+    abstract = "Role-oriented dialogue summarization is to generate summaries for different roles in the dialogue, e.g., merchants and consumers. Existing methods handle this task by summarizing each role{'}s content separately and thus are prone to ignore the information from other roles. However, we believe that other roles{'} content could benefit the quality of summaries, such as the omitted information mentioned by other roles. Therefore, we propose a novel role interaction enhanced method for role-oriented dialogue summarization. It adopts cross attention and decoder self-attention interactions to interactively acquire other roles{'} critical information. The cross attention interaction aims to select other roles{'} critical dialogue utterances, while the decoder self-attention interaction aims to obtain key information from other roles{'} summaries. Experimental results have shown that our proposed method significantly outperforms strong baselines on two public role-oriented dialogue summarization datasets. Extensive analyses have demonstrated that other roles{'} content could help generate summaries with more complete semantics and correct topic structures.",
+}
+```
 
 
 If you have any issues, please contact with haitao.lin@nlpr.ia.ac.cn
