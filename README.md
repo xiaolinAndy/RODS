@@ -1,6 +1,6 @@
 # RODS
 
-The official repository for ACL 2022 main conference paper: Other Roles Matter! Enhancing Role-Oriented Dialogue Summarization via Role Interactions.
+The official repository for ACL 2022 main conference paper: [Other Roles Matter! Enhancing Role-Oriented Dialogue Summarization via Role Interactions](https://aclanthology.org/2022.acl-long.182/).
 
 ## Instructions
 
