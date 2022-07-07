@@ -34,7 +34,7 @@ We experiment on two datasets ([CSDS](https://github.com/xiaolinAndy/CSDS) and [
 - nltk == 3.5
 - bert-score == 0.3.6
 - moverscore == 1.0.3
-- transformers == 3.3.1
+- transformers == 3.0.0
 
 #### Instruction for PGN interact
 
