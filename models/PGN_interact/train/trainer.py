@@ -85,10 +85,12 @@ class MultiBeam(object):
     def avg_log_prob(self):
         return (self.user.avg_log_prob + self.agent.avg_log_prob)
 
-def change_word2id_split(ref, pred):
+def change_word2id(ref, pred):
+    # ref = re.sub('用户|客服|', '', ref)
+    # pred = re.sub('用户|客服|', '', pred)
     ref_id, pred_id = [], []
-    tmp_dict = {'%': 0}
-    new_index = 1
+    tmp_dict = {}
+    new_index = 0
     words = list(ref)
     for w in words:
         if w not in tmp_dict.keys():
@@ -97,8 +99,6 @@ def change_word2id_split(ref, pred):
             new_index += 1
         else:
             ref_id.append(str(tmp_dict[w]))
-        if w == '。':
-            ref_id.append(str(0))
     words = list(pred)
     for w in words:
         if w not in tmp_dict.keys():
@@ -107,8 +107,6 @@ def change_word2id_split(ref, pred):
             new_index += 1
         else:
             pred_id.append(str(tmp_dict[w]))
-        if w == '。':
-            pred_id.append(str(0))
     return ' '.join(ref_id), ' '.join(pred_id)
 
 
@@ -210,7 +208,7 @@ class BeamSearch(object):
                     for pred in preds[i]:
                         f.write(pred + '\n')
             for ref, pred in zip(refs[i], preds[i]):
-                ref_id, pred_id = change_word2id_split(ref, pred)
+                ref_id, pred_id = change_word2id(ref, pred)
                 ref_ids.append(ref_id)
                 pred_ids.append(pred_id)
 
@@ -222,13 +220,324 @@ class BeamSearch(object):
             with open(self.save_dir + 'pred_ids.txt', 'w') as f:
                 for pred in pred_ids:
                     f.write(pred + '\n')
-            os.system('files2rouge %s/ref_ids.txt %s/pred_ids.txt -s rouge.txt -e 0' % (self.save_dir, self.save_dir))
+            files2rouge.run(self.save_dir + 'pred_ids.txt', self.save_dir + 'ref_ids.txt')
 
 
     def get_ratio(self, attn, role_mask):
         user_attn = torch.sum(attn[role_mask == 1])
         agent_attn = torch.sum(attn[role_mask == 2])
         return user_attn.item(), agent_attn.item()
+
+    # strategy 1: org for inter 2
+    # def beam_search(self, batch):
+    #
+    #     # batch should have only one example
+    #     enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_0, coverage_t_0, role_mask = get_input_from_batch(
+    #         batch, self.device, self.vocab)
+    #     encoder_outputs, encoder_feature, encoder_hidden = self.model.encoder(enc_batch, enc_lens)
+    #     s_t_0 = self.model.reduce_state(encoder_hidden)
+    #
+    #     dec_h, dec_c = s_t_0  # 1 x 2*hidden_size
+    #     dec_h = dec_h.squeeze()
+    #     dec_c = dec_c.squeeze()
+    #
+    #     # decode final
+    #     if not self.args.no_final:
+    #         decoder = self.model.final_decoder  #, self.model.user_decoder, self.model.agent_decoder]
+    #
+    #         # decoder batch preparation, it has beam_size example initially everything is repeated
+    #         final_beams = []
+    #         for _ in range(config.args.beam_size):
+    #             final_beams.append(Beam(tokens=[self.vocab.token2idx('<START>')],
+    #                                   log_probs=[0.0],
+    #                                   state=(dec_h[0], dec_c[0]),
+    #                                   context=c_t_0[0],
+    #                                   coverage=(coverage_t_0[0] if config.is_coverage else None),
+    #                                   inter=torch.zeros(config.hidden_dim).to(c_t_0),
+    #                                   history=None,
+    #                                   mask=None,
+    #                                   stop=False))
+    #         final_results = []
+    #         steps = 0
+    #         while steps < config.args.max_dec_steps and len(final_results) < config.args.beam_size:
+    #             latest_tokens = [h.latest_token for h in final_beams]
+    #             latest_tokens = [t if t < self.vocab.vocab_size else self.vocab.token2idx('[UNK]') \
+    #                              for t in latest_tokens]
+    #             y_t_1 = torch.LongTensor(latest_tokens)
+    #             y_t_1 = y_t_1.to(self.device)
+    #             all_state_h = []
+    #             all_state_c = []
+    #
+    #             all_context = []
+    #
+    #             for h in final_beams:
+    #                 state_h, state_c = h.state
+    #                 all_state_h.append(state_h)
+    #                 all_state_c.append(state_c)
+    #
+    #                 all_context.append(h.context)
+    #
+    #
+    #             s_t_1 = (torch.stack(all_state_h, 0).unsqueeze(0), torch.stack(all_state_c, 0).unsqueeze(0))
+    #             c_t_1 = torch.stack(all_context, 0)
+    #             int_t_1 = None
+    #
+    #             coverage_t_1 = None
+    #             if config.is_coverage:
+    #                 all_coverage = []
+    #                 for h in final_beams:
+    #                     all_coverage.append(h.coverage)
+    #                 coverage_t_1 = torch.stack(all_coverage, 0)
+    #
+    #             # inter mask & features
+    #             all_inter_feats = None
+    #             all_inter_masks = None
+    #             final_dist, s_t, c_t, attn_dist, p_gen, coverage_t, new_inter_feature, int_t = decoder(y_t_1, s_t_1,
+    #                                                                                                        encoder_outputs,
+    #                                                                                                        encoder_feature,
+    #                                                                                                        enc_padding_mask,
+    #                                                                                                        c_t_1,
+    #                                                                                                        extra_zeros,
+    #                                                                                                        enc_batch_extend_vocab,
+    #                                                                                                        coverage_t_1,
+    #                                                                                                        steps,
+    #                                                                                                        int_t_1,
+    #                                                                                                        all_inter_masks,
+    #                                                                                                        all_inter_feats)
+    #             log_probs = torch.log(final_dist)
+    #             topk_log_probs, topk_ids = torch.topk(log_probs, config.args.beam_size * 2)
+    #
+    #             dec_h, dec_c = s_t
+    #             dec_h = dec_h.squeeze()
+    #             dec_c = dec_c.squeeze()
+    #
+    #             all_beams = []
+    #             num_orig_beams = 1 if steps == 0 else len(final_beams)
+    #             for i in range(num_orig_beams):
+    #                 for k in range(config.args.beam_size * 2):  # for each of the top 2*beam_size hyps:
+    #                     h = final_beams[i]
+    #                     state_i = (dec_h[i], dec_c[i])
+    #                     context_i = c_t[i]
+    #                     coverage_i = (coverage_t[i] if config.is_coverage else None)
+    #                     inter_i = None
+    #                     history_i = None
+    #
+    #                     if topk_ids[i, k].item() == self.vocab.token2idx('<END>') or h.stop:
+    #                         stop_i = True
+    #                     else:
+    #                         stop_i = False
+    #                     if h.stop:
+    #                         mask_i = torch.zeros(1).to(self.device)
+    #                     else:
+    #                         mask_i = torch.ones(1).to(self.device)
+    #                     new_beam = h.extend(token=topk_ids[i, k].item(),
+    #                                         log_prob=topk_log_probs[i, k].item(),
+    #                                         state=state_i,
+    #                                         context=context_i,
+    #                                         coverage=coverage_i,
+    #                                         inter=inter_i,
+    #                                         history=history_i,
+    #                                         mask=mask_i,
+    #                                         stop=stop_i)
+    #                     all_beams.append(new_beam)
+    #             final_beams = []
+    #             for beam in self.sort_beams(all_beams):
+    #                 if beam.stop:
+    #                     if steps >= config.min_dec_steps:
+    #                         final_results.append(beam)
+    #                 else:
+    #                     final_beams.append(beam)
+    #                 if len(final_beams) == config.args.beam_size or len(final_results) == config.args.beam_size:
+    #                     break
+    #
+    #             steps += 1
+    #
+    #         if len(final_results) == 0:
+    #             final_results = final_beams
+    #         final_results = self.sort_beams(final_results)
+    #
+    #     # decode role sums
+    #     dec_h, dec_c = s_t_0  # 1 x 2*hidden_size
+    #     dec_h = dec_h.squeeze()
+    #     dec_c = dec_c.squeeze()
+    #     decoders = [self.model.user_decoder, self.model.agent_decoder]
+    #     multi_beams = []
+    #     for _ in range(config.args.beam_size):
+    #         tmp_beams = []
+    #         for _ in range(2):
+    #             tmp_beams.append(Beam(tokens=[self.vocab.token2idx('<START>')],
+    #                                   log_probs=[0.0],
+    #                                   state=(dec_h[0], dec_c[0]),
+    #                                   context=c_t_0[0],
+    #                                   coverage=(coverage_t_0[0] if config.is_coverage else None),
+    #                                   inter=torch.zeros(config.hidden_dim).to(c_t_0),
+    #                                   history=None,
+    #                                   mask=None,
+    #                                   stop=False))
+    #         multi_beams.append(MultiBeam(tmp_beams[0], tmp_beams[1]))
+    #
+    #     results = [[], []]
+    #     steps = 0
+    #     while steps < config.args.max_dec_steps and (len(results[0]) < config.args.beam_size or
+    #                                                  len(results[1]) < config.args.beam_size):
+    #         update_infos = []
+    #         for i in range(2):
+    #             beams = [h.beams[i] for h in multi_beams]
+    #             latest_tokens = [h.latest_token for h in beams]
+    #             latest_tokens = [t if t < self.vocab.vocab_size else self.vocab.token2idx('[UNK]') \
+    #                              for t in latest_tokens]
+    #             y_t_1 = torch.LongTensor(latest_tokens)
+    #             y_t_1 = y_t_1.to(self.device)
+    #             all_state_h = []
+    #             all_state_c = []
+    #
+    #             all_context = []
+    #             all_inter = []
+    #             all_history = []
+    #
+    #             for h in beams:
+    #                 state_h, state_c = h.state
+    #                 all_state_h.append(state_h)
+    #                 all_state_c.append(state_c)
+    #
+    #                 all_context.append(h.context)
+    #                 all_inter.append(h.inter)
+    #                 all_history.append(h.history)
+    #
+    #             s_t_1 = (torch.stack(all_state_h, 0).unsqueeze(0), torch.stack(all_state_c, 0).unsqueeze(0))
+    #             c_t_1 = torch.stack(all_context, 0)
+    #             int_t_1 = torch.stack(all_inter, 0)
+    #
+    #             coverage_t_1 = None
+    #             if config.is_coverage:
+    #                 all_coverage = []
+    #                 for h in beams:
+    #                     all_coverage.append(h.coverage)
+    #                 coverage_t_1 = torch.stack(all_coverage, 0)
+    #
+    #             # inter mask & features
+    #             all_inter_feats = []
+    #             all_inter_masks = []
+    #             if i == 0:
+    #                 k = 1
+    #                 beams = [h.beams[k] for h in multi_beams]
+    #                 for h in beams:
+    #                     all_inter_feats.append(h.history)
+    #                     all_inter_masks.append(h.mask)
+    #                 if steps != 0:
+    #                     all_inter_feats = torch.stack(all_inter_feats, 0)
+    #                     all_inter_masks = torch.stack(all_inter_masks, 0)
+    #                 else:
+    #                     all_inter_feats = None
+    #             else:
+    #                 k = 0
+    #                 beams = [h.beams[k] for h in multi_beams]
+    #                 for h in beams:
+    #                     all_inter_feats.append(h.history)
+    #                     all_inter_masks.append(h.mask)
+    #                 if steps != 0:
+    #                     all_inter_feats = torch.stack(all_inter_feats, 0)
+    #                     all_inter_masks = torch.stack(all_inter_masks, 0)
+    #                 else:
+    #                     all_inter_feats = None
+    #
+    #             final_dist, s_t, c_t, attn_dist, p_gen, coverage_t, new_inter_feature, int_t, _, _ = decoders[i](y_t_1, s_t_1,
+    #                                                                                                        encoder_outputs,
+    #                                                                                                        encoder_feature,
+    #                                                                                                        enc_padding_mask,
+    #                                                                                                        c_t_1,
+    #                                                                                                        extra_zeros,
+    #                                                                                                        enc_batch_extend_vocab,
+    #                                                                                                        coverage_t_1,
+    #                                                                                                        steps,
+    #                                                                                                        int_t_1,
+    #                                                                                                        all_inter_masks,
+    #                                                                                                        all_inter_feats,
+    #                                                                                                        role_mask)
+    #             #print(self.get_ratio(attn_dist[0, :], role_mask[0, :]))
+    #             log_probs = torch.log(final_dist)
+    #             topk_log_probs, topk_ids = torch.topk(log_probs, config.args.beam_size * 2)
+    #
+    #             dec_h, dec_c = s_t
+    #             dec_h = dec_h.squeeze()
+    #             dec_c = dec_c.squeeze()
+    #             update_infos.append(
+    #                 [beams, dec_h, dec_c, c_t, coverage_t, int_t, new_inter_feature, topk_ids, topk_log_probs])
+    #
+    #         all_beams = []
+    #         num_orig_beams = 1 if steps == 0 else len(multi_beams)
+    #         for i in range(num_orig_beams):
+    #             for k in range(config.args.beam_size * 2):  # for each of the top 2*beam_size hyps:
+    #                 new_multi_beam = []
+    #                 for j in range(2):
+    #                     h = multi_beams[i].beams[j]
+    #                     state_i = (update_infos[j][1][i], update_infos[j][2][i])
+    #                     context_i = update_infos[j][3][i]
+    #                     coverage_i = (update_infos[j][4][i] if config.is_coverage else None)
+    #                     inter_i = update_infos[j][5][i]
+    #                     history_i = update_infos[j][6][i]
+    #
+    #                     if update_infos[j][7][i, k].item() == self.vocab.token2idx('<END>') or h.stop:
+    #                         stop_i = True
+    #                     else:
+    #                         stop_i = False
+    #                     if h.stop:
+    #                         mask_i = torch.zeros(1).to(self.device)
+    #                     else:
+    #                         mask_i = torch.ones(1).to(self.device)
+    #                     new_beam = h.extend(token=update_infos[j][7][i, k].item(),
+    #                                         log_prob=update_infos[j][8][i, k].item(),
+    #                                         state=state_i,
+    #                                         context=context_i,
+    #                                         coverage=coverage_i,
+    #                                         inter=inter_i,
+    #                                         history=history_i,
+    #                                         mask=mask_i,
+    #                                         stop=stop_i)
+    #                     new_multi_beam.append(new_beam)
+    #                 new_multi_beam = MultiBeam(new_multi_beam[0], new_multi_beam[1])
+    #                 all_beams.append(new_multi_beam)
+    #
+    #         multi_beams_list = [[], []]
+    #         for i in range(2):
+    #             beams = [multi.beams[i] for multi in all_beams]
+    #             if len(results[i]) < config.args.beam_size:
+    #                 for beam in self.sort_beams(beams):
+    #                     if beam.stop:
+    #                         if steps >= config.min_dec_steps:
+    #                             results[i].append(beam)
+    #                     else:
+    #                         multi_beams_list[i].append(beam)
+    #                     if len(multi_beams_list[i]) == config.args.beam_size:
+    #                         break
+    #                     if len(results[i]) == config.args.beam_size:
+    #                         multi_beams_list[i] = results[i]
+    #                         break
+    #             else:
+    #                 multi_beams_list[i] = results[i]
+    #             # align results
+    #             if len(results[i]) != 0:
+    #                 max_len = max([s.history.shape[0] for s in results[i]])
+    #                 for j in range(len(results[i])):
+    #                     if results[i][j].history.shape[0] < max_len:
+    #                         results[i][j] = results[i][j].padding(max_len)
+    #
+    #         multi_beams = []
+    #         for i in range(len(multi_beams_list[0])):
+    #             multi_beams.append(MultiBeam(multi_beams_list[0][i], multi_beams_list[1][i]))
+    #
+    #         steps += 1
+    #
+    #     beams_sorted = [[], []]
+    #     for i in range(2):
+    #         if len(results[i]) == 0:
+    #             results[i] = [multi.beams[i] for multi in multi_beams]
+    #         beams_sorted[i] = self.sort_beams(results[i])
+    #     #exit()
+    #     if self.args.no_final:
+    #         return beams_sorted[0][0], beams_sorted[1][0]
+    #     else:
+    #         return final_results[0], beams_sorted[0][0], beams_sorted[1][0]
 
 
     def beam_search(self, batch):
@@ -634,7 +943,7 @@ class PGNTrainer(object):
             get_agent_from_batch(batch, self.device, self.vocab)
         sum_inputs = [final_batch_input, user_batch_input, agent_batch_input]
         sum_paddings = [final_padding_mask, user_padding_mask, agent_padding_mask]
-        max_sum_len = max_final_len
+        max_sum_len = max(max_user_len, max_agent_len)
         max_lens_var = [final_lens_var, user_lens_var, agent_lens_var]
         sum_outputs = [final_batch_output, user_batch_output, agent_batch_output]
         decoders = [self.model.final_decoder, self.model.user_decoder, self.model.agent_decoder]

@@ -47,16 +47,19 @@ def get_input_from_batch(features, device, vocab):
     return enc_input_ids, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, role_mask_ids
 
 def get_final_from_batch(features, device, vocab):
-    final_input_ids, final_output_ids, final_lens = features[1]
-    final_padding_mask = final_input_ids.ne(vocab.token2idx('<PAD>')).float()
-    max_final_len = max(final_lens)
+    if features[1][0] == None:
+        return None, None, None, None, None
+    else:
+        final_input_ids, final_output_ids, final_lens = features[1]
+        final_padding_mask = final_input_ids.ne(vocab.token2idx('<PAD>')).float()
+        max_final_len = max(final_lens)
 
-    final_input_ids = final_input_ids.to(device)
-    final_padding_mask = final_padding_mask.to(device)
-    final_lens = final_lens.to(device)
-    final_output_ids = final_output_ids.to(device)
+        final_input_ids = final_input_ids.to(device)
+        final_padding_mask = final_padding_mask.to(device)
+        final_lens = final_lens.to(device)
+        final_output_ids = final_output_ids.to(device)
 
-    return final_input_ids, final_padding_mask, max_final_len, final_lens, final_output_ids
+        return final_input_ids, final_padding_mask, max_final_len, final_lens, final_output_ids
 
 def get_user_from_batch(features, device, vocab):
     user_input_ids, user_output_ids, user_lens = features[2]
