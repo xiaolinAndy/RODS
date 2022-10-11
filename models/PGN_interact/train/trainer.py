@@ -1060,7 +1060,7 @@ class PGNTrainer(object):
             get_agent_from_batch(batch, self.device, self.vocab)
         sum_inputs = [final_batch_input, user_batch_input, agent_batch_input]
         sum_paddings = [final_padding_mask, user_padding_mask, agent_padding_mask]
-        max_sum_len = max_final_len
+        max_sum_len = max(max_user_len, max_agent_len)
         max_lens_var = [final_lens_var, user_lens_var, agent_lens_var]
         sum_outputs = [final_batch_output, user_batch_output, agent_batch_output]
         decoders = [self.model.final_decoder, self.model.user_decoder, self.model.agent_decoder]
